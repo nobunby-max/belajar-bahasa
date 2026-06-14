@@ -91,6 +91,16 @@
 
   .voicewarn{max-width:560px;font-size:.72rem;color:#ffd166;text-align:center;margin-top:14px;display:none;}
   footer{color:#5d6b82;font-size:.68rem;margin-top:26px;text-align:center;}
+
+  /* learned */
+  .btn-learned{
+    margin-top:14px;padding:9px 22px;border-radius:999px;border:1px solid rgba(45,212,191,.4);
+    background:rgba(45,212,191,.1);color:var(--accent2);font-size:.82rem;font-weight:700;
+    cursor:pointer;transition:.15s;
+  }
+  .btn-learned.done{background:var(--accent2);color:#04211d;border-color:transparent;}
+  .btn-learned:active{transform:scale(.95);}
+  #hide-learned.active{color:var(--accent2);}
 </style>
 </head>
 <body>
@@ -125,6 +135,7 @@
         <div class="word" id="b-word"></div>
         <div class="ex" id="b-ex"></div>
         <button class="speak small" id="b-speak">🔊 例文を再生</button>
+        <button class="btn-learned" id="mark-learned">✓ 覚えた</button>
         <div class="hint">← タップで戻る</div>
       </div>
     </div>
@@ -140,6 +151,7 @@
     <button id="shuffle">🔀 シャッフル</button>
     <button id="reset">↺ 最初から</button>
     <button id="auto">▶ 自動再生</button>
+    <button id="hide-learned">☆ 覚えた非表示</button>
   </div>
 
   <div class="voicewarn" id="voicewarn" style="display:none"></div>
@@ -594,6 +606,8 @@ DECK.forEach((d,i)=>{ d.i = i; });   // stable index used to find audio files
 let cat = "All";
 let cards = [];
 let idx = 0;
+let learnedSet = new Set(JSON.parse(localStorage.getItem("belajar_learned")||"[]"));
+let hideLearned = false;
 let autoTimer = null;
 
 const $ = s => document.querySelector(s);
@@ -659,7 +673,9 @@ function buildCats(){
   });
 }
 function applyCat(){
-  cards = (cat==="All") ? DECK.slice() : DECK.filter(d=>d.cat===cat);
+  let deck = (cat==="All") ? DECK.slice() : DECK.filter(d=>d.cat===cat);
+  if(hideLearned) deck = deck.filter(d=>!learnedSet.has(d.i));
+  cards = deck;
   idx = 0;
   buildCats();
   render();
@@ -675,7 +691,11 @@ function render(){
   else { $("#f-note").style.display="none"; }
   $("#b-word").textContent = c.en;
   $("#b-ex").textContent = c.exEn || "";
-  $("#counter").textContent = (idx+1)+" / "+cards.length;
+  const isLearned = learnedSet.has(c.i);
+  const lb = $("#mark-learned");
+  if(lb){ lb.textContent = isLearned ? "✓ 覚えた済み" : "✓ 覚えた"; lb.className = "btn-learned"+(isLearned?" done":""); }
+  const totalLearned = DECK.filter(d=>learnedSet.has(d.i)).length;
+  $("#counter").textContent = (idx+1)+" / "+cards.length+(totalLearned?" · ★"+totalLearned+"覚えた済み":"");
   $("#barfill").style.width = ((idx+1)/cards.length*100)+"%";
 }
 function highlight(sentence, term){
@@ -708,6 +728,24 @@ function toggleAuto(){
   step();
 }
 
+function toggleLearned(){
+  const c = cards[idx];
+  if(learnedSet.has(c.i)) learnedSet.delete(c.i);
+  else learnedSet.add(c.i);
+  localStorage.setItem("belajar_learned", JSON.stringify([...learnedSet]));
+  render();
+  if(hideLearned && learnedSet.has(c.i)){
+    setTimeout(()=>{ if(cards.length>1){ next(); } else { applyCat(); } }, 400);
+  }
+}
+function toggleHideLearned(){
+  hideLearned = !hideLearned;
+  const btn = $("#hide-learned");
+  btn.textContent = hideLearned ? "☆ 全部表示" : "☆ 覚えた非表示";
+  btn.classList.toggle("active", hideLearned);
+  applyCat();
+}
+
 /* ===== Events ===== */
 card.addEventListener("click", flip);
 $("#f-speak").addEventListener("click", e=>{ e.stopPropagation(); playWord(); });
@@ -719,6 +757,8 @@ $("#prev").onclick=()=>{stopAuto();prev();};
 $("#shuffle").onclick=()=>{stopAuto();shuffle();};
 $("#reset").onclick=()=>{stopAuto();applyCat();};
 $("#auto").onclick=toggleAuto;
+$("#hide-learned").onclick=toggleHideLearned;
+$("#mark-learned").addEventListener("click", e=>{ e.stopPropagation(); toggleLearned(); });
 document.addEventListener("keydown",e=>{
   if(e.key==="ArrowRight"){stopAuto();next();}
   else if(e.key==="ArrowLeft"){stopAuto();prev();}
