@@ -681,6 +681,16 @@ function applyCat(){
   buildCats();
   render();
 }
+function stripJP(note){
+  if(!note) return '';
+  // Split on ・; keep segments with Latin letters; strip JP chars from those
+  const segs = note.split(/\s*[・]\s*/);
+  const cleaned = segs
+    .filter(s => /[a-zA-Z]/.test(s))
+    .map(s => s.replace(/[\u3000-\u9fff\uff00-\uffef\u3040-\u30ff]/g,'').replace(/\s{2,}/g,' ').trim())
+    .filter(s => s.length > 0);
+  return cleaned.join(' ').trim();
+}
 function render(){
   if(!cards.length) return;
   const c = cards[idx];
@@ -688,7 +698,8 @@ function render(){
   $("#f-tag").textContent = c.cat==="Dialog"?"Dialog":(c.cat==="Kata"?"Kata":"Ungkapan");
   $("#f-word").textContent = c.id;
   $("#f-ex").innerHTML = c.ex ? highlight(c.ex, c.id) : "";
-  if(c.note){ $("#f-note").style.display="block"; $("#f-note").textContent=c.note; }
+  const noteStr = stripJP(c.note);
+  if(noteStr){ $("#f-note").style.display="block"; $("#f-note").textContent=noteStr; }
   else { $("#f-note").style.display="none"; }
   $("#b-word").textContent = c.en;
   $("#b-ex").textContent = c.exEn || "";
