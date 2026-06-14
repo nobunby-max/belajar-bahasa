@@ -35,7 +35,8 @@
   .chip:active{transform:scale(.96);}
 
   .progress{max-width:560px;width:100%;display:flex;align-items:center;gap:10px;margin:10px 0 4px;color:#9fb0c8;font-size:.76rem;}
-  .bar{flex:1;height:6px;background:rgba(255,255,255,.12);border-radius:999px;overflow:hidden;}
+  .bar{flex:1;height:6px;background:rgba(255,255,255,.12);border-radius:999px;overflow:hidden;cursor:pointer;}
+  #counter{cursor:pointer;text-decoration:underline dotted;}
   .bar > i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--gold));transition:width .25s;}
 
   /* card */
@@ -746,6 +747,22 @@ function toggleHideLearned(){
   applyCat();
 }
 
+/* ===== Jump navigation ===== */
+function jumpByBar(e){
+  e.stopPropagation();
+  const bar = document.querySelector(".bar");
+  const rect = bar.getBoundingClientRect();
+  const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+  const pct = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+  idx = Math.round(pct * (cards.length - 1));
+  stopAuto();
+  render();
+}
+function jumpByNumber(){
+  const n = parseInt(prompt("カード番号を入力 (1〜" + cards.length + ")", idx + 1));
+  if(n >= 1 && n <= cards.length){ stopAuto(); idx = n - 1; render(); }
+}
+
 /* ===== Events ===== */
 card.addEventListener("click", flip);
 $("#f-speak").addEventListener("click", e=>{ e.stopPropagation(); playWord(); });
@@ -756,6 +773,9 @@ $("#next").onclick=()=>{stopAuto();next();};
 $("#prev").onclick=()=>{stopAuto();prev();};
 $("#shuffle").onclick=()=>{stopAuto();shuffle();};
 $("#reset").onclick=()=>{stopAuto();applyCat();};
+document.querySelector(".bar").addEventListener("click", jumpByBar);
+document.querySelector(".bar").addEventListener("touchend", e=>{ e.preventDefault(); jumpByBar(e.changedTouches[0] ? Object.assign(e, {touches: e.changedTouches}) : e); });
+$("#counter").addEventListener("click", jumpByNumber);
 $("#auto").onclick=toggleAuto;
 $("#hide-learned").onclick=toggleHideLearned;
 $("#mark-learned").addEventListener("click", e=>{ e.stopPropagation(); toggleLearned(); });
