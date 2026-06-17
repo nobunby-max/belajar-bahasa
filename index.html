@@ -629,16 +629,30 @@ const player = new Audio();
 let onEnded = null;
 player.addEventListener("ended", ()=>{ if(onEnded){ const f=onEnded; onEnded=null; f(); } });
 
+function showVoiceWarn(){
+  const el = $("#voicewarn");
+  el.textContent = '⚠ 音声が使えません。iPhoneの場合は「設定 → アクセシビリティ → 読み上げコンテンツ → 声 → インドネシア語」をインストールしてください。';
+  el.style.display = "block";
+}
+
 function ttsFallback(text){
-  $("#voicewarn").style.display = "block";
-  if(!("speechSynthesis" in window)) return;
+  if(!("speechSynthesis" in window)){ showVoiceWarn(); return; }
   speechSynthesis.cancel();
   const u = new SpeechSynthesisUtterance(text);
   u.lang = "id-ID";
   if(idVoice) u.voice = idVoice;
   u.rate = 0.9; u.pitch = 1;
+  u.onerror = showVoiceWarn;
   if(onEnded){ const f=onEnded; onEnded=null; u.onend=f; }
   speechSynthesis.speak(u);
+}
+
+function tryOnlineTts(text){
+  const url = 'https://translate.google.com/translate_tts?ie=UTF-8&q=' + encodeURIComponent(text) + '&tl=id&client=tw-ob&ttsspeed=0.8';
+  player.onerror = () => ttsFallback(text);
+  player.src = url;
+  const p = player.play();
+  if(p && p.catch) p.catch(() => ttsFallback(text));
 }
 
 /* kind: "w" (headword) or "s" (sentence). onDone runs when playback finishes. */
@@ -654,7 +668,7 @@ function play(kind, onDone){
     const p = player.play();
     if(p && p.catch) p.catch(()=> ttsFallback(text));
   } else {
-    ttsFallback(text);
+    tryOnlineTts(text);
   }
 }
 const playWord = ()=> play("w");
@@ -695,6 +709,7 @@ function render(){
   if(!cards.length) return;
   const c = cards[idx];
   card.classList.remove("flipped");
+  $("#voicewarn").style.display = "none";
   $("#f-tag").textContent = c.cat==="Dialog"?"Dialog":(c.cat==="Kata"?"Kata":"Ungkapan");
   $("#f-word").textContent = c.id;
   $("#f-ex").innerHTML = c.ex ? highlight(c.ex, c.id) : "";
