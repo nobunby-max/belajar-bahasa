@@ -648,11 +648,13 @@ function ttsFallback(text){
 }
 
 function tryOnlineTts(text){
-  const url = 'https://translate.google.com/translate_tts?ie=UTF-8&q=' + encodeURIComponent(text) + '&tl=id&client=tw-ob&ttsspeed=0.8';
-  player.onerror = () => ttsFallback(text);
+  const url = 'https://translate.googleapis.com/translate_tts?ie=UTF-8&q=' + encodeURIComponent(text) + '&tl=id&client=gtx';
+  let done = false;
+  const fallback = () => { if(!done){ done=true; ttsFallback(text); } };
+  player.onerror = fallback;
   player.src = url;
   const p = player.play();
-  if(p && p.catch) p.catch(() => ttsFallback(text));
+  if(p && p.catch) p.catch(fallback);
 }
 
 /* kind: "w" (headword) or "s" (sentence). onDone runs when playback finishes. */
